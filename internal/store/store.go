@@ -254,3 +254,7 @@ func (s *Store) profileDir(id string) (string, error) {
 
 	return filepath.Join(profilesDir, id), nil
 }
+
+func (s *Store) ProfileDir(id string) (string, error) {
+	return s.profileDir(id)
+}
