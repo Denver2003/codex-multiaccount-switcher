@@ -116,7 +116,7 @@ func registeredCommands() map[string]command {
 			name:        "save-current",
 			usage:       "save-current [--label <value>]",
 			description: "Save the current active auth as a reusable profile.",
-			run:         notImplemented("save-current"),
+			run:         runSaveCurrent,
 		},
 		"status": {
 			name:        "status",
@@ -128,7 +128,7 @@ func registeredCommands() map[string]command {
 			name:        "switch",
 			usage:       "switch <profile>",
 			description: "Switch the active Codex auth to a saved profile.",
-			run:         notImplemented("switch"),
+			run:         runSwitch,
 		},
 	}
 }

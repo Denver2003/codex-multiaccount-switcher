@@ -12,4 +12,7 @@ var (
 	ErrMetadataNotFound = errors.New("metadata not found")
 	ErrInvalidMetadata  = errors.New("invalid metadata")
 	ErrProfileNotFound  = errors.New("profile not found")
+	ErrLabelConflict    = errors.New("label conflict")
+	ErrInvalidLabel     = errors.New("invalid label")
+	ErrProfileCorrupt   = errors.New("profile corrupt")
 )
