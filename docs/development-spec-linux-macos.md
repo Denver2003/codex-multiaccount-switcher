@@ -103,16 +103,16 @@ All commands must:
 - print concise human-readable output
 - avoid printing secrets
 - return non-zero exit codes on failure
-- support `--json` output mode if implementation cost is acceptable
 
-For MVP, human-readable output is required. Structured output is optional.
+For MVP, human-readable output is required.
+
+Structured `--json` output is explicitly out of scope for MVP and may be added later.
 
 ### 6.2 Global Flags
 
 Recommended global flags:
 
 - `--verbose`
-- `--json`
 - `--config-dir <path>`
 - `--auth-file <path>`
 
@@ -199,6 +199,7 @@ Success output per profile should include:
 Sorting:
 
 - default sort by label ascending
+- ties are resolved by profile ID ascending
 
 Failure conditions:
 
@@ -246,6 +247,11 @@ Failure conditions:
 - invalid auth JSON
 - label conflict
 - profile store write failure
+
+Commit rule:
+
+- a newly created profile is considered committed only after `metadata.json` has been written successfully
+- if profile-local files were written but `metadata.json` update failed, the command must report failure and the profile must not be treated as visible by normal read commands
 
 ### 7.4 `add`
 
@@ -382,6 +388,28 @@ Behavior note:
 
 - removing a saved profile does not modify the live active auth file
 
+## 7.8 Interactive Behavior
+
+Interactive mode must be determined as:
+
+- `stdin` is a TTY
+- `stdout` is a TTY
+- `--no-input` is not set
+
+Non-interactive mode applies when any of the above conditions is false.
+
+Confirmation parsing rules:
+
+- accept `y` and `yes` in any letter case as confirmation
+- any other non-empty input is treated as refusal
+- EOF is treated as refusal
+
+Prompt text does not need to be byte-for-byte fixed in MVP, but must clearly state:
+
+- what action is about to happen
+- whether auth will be removed or a profile deleted
+- how the user can avoid the action
+
 ## 8. Output and Exit Codes
 
 ### 8.1 Human Output
@@ -443,6 +471,7 @@ On first write operation, the tool must ensure:
 - config directory exists with `0700`
 - `profiles` exists with `0700`
 - `backups` exists with `0700`
+- `metadata.json`, when created, uses `0600`
 
 ## 10. File Schemas
 
@@ -475,6 +504,7 @@ Notes:
 - `current_profile_id` may be empty or omitted if unknown
 - `last_switch_at` may be empty or omitted before the first switch
 - `profiles` is the authoritative profile index
+- `metadata.json` must be written with file mode `0600`
 
 ### 10.2 `profile.json`
 
@@ -494,6 +524,7 @@ Recommended per-profile file:
 Rule:
 
 - `profile.json` and the metadata entry for that profile must contain the same values
+- `profile.json` must be written with file mode `0600`
 
 ### 10.3 `auth.json`
 
@@ -504,6 +535,7 @@ Rules:
 - content must be preserved exactly as read, except for trailing newline normalization if required by file writing implementation
 - no secret fields may be removed from stored profile auth
 - no migration of upstream auth format should happen in MVP
+- stored profile `auth.json` must be written with file mode `0600`
 
 ### 10.4 Backup File Naming
 
@@ -518,6 +550,24 @@ Example:
 Backup metadata may be encoded in filename only for MVP.
 
 If implementation cost is low, a separate `backups.json` index may be added later, but it is not required.
+
+Backup files must be written with file mode `0600`.
+
+### 10.5 Profile ID Format
+
+`profile-id` format is fixed for MVP.
+
+Rules:
+
+- prefix: `prof_`
+- suffix: 16 lowercase base32 characters without padding
+- suffix must be generated from cryptographically secure random bytes
+
+Example:
+
+- `prof_8f3k2m1q7t9v4x6z`
+
+The implementation must treat profile IDs as opaque identifiers outside of validation and storage.
 
 ## 11. Auth Normalization and Hashing
 
@@ -591,17 +641,34 @@ Resolution order:
 2. detected email
 3. generated fallback `account-N`
 
-### 12.4 Email Extraction
+### 12.4 Fallback Label Generation
+
+Fallback labels must be generated deterministically from the current visible profile set.
+
+Algorithm:
+
+1. build the set of existing labels using case-insensitive comparison
+2. start from `account-1`
+3. increment `N` until a free label is found
+4. use the first free label
+
+Rules:
+
+- deleted profiles do not reserve labels
+- hidden or orphaned profile directories do not reserve labels unless they are present in `metadata.json`
+
+### 12.5 Email Extraction
 
 Email extraction is best-effort only.
 
 MVP rule:
 
 - parse auth JSON generically
-- only use a value as email if it is explicitly present as a string and confidently identifiable
-- if uncertain, do not infer
+- only use a value as email if there is an explicitly confirmed top-level string field named `email`
+- if such a field is absent, do not infer email from any other field
+- if such a field is present but does not look like a basic email address, ignore it
 
-Exact extraction rules can remain narrow in MVP.
+This intentionally keeps email extraction narrow in MVP.
 
 ## 13. Validation Rules
 
@@ -658,6 +725,14 @@ Algorithm:
 4. set required permissions
 5. rename over destination
 
+Recommended implementation detail:
+
+- call file `fsync` before rename when supported in the chosen implementation path
+
+Out of scope for MVP:
+
+- directory `fsync` after rename
+
 ### 14.2 Active Auth Replacement
 
 Switching active auth must use atomic replace at the final live path.
@@ -705,6 +780,18 @@ Whenever a profile changes, the tool must update:
 - the entry in `metadata.json`
 - the corresponding `profile.json`
 
+Write ordering rules:
+
+- for profile creation, write profile-local files first and `metadata.json` last
+- for profile update, write profile-local files first and `metadata.json` last
+- for profile deletion, delete the profile directory first and write `metadata.json` last if the deletion succeeds
+
+Commit semantics:
+
+- `metadata.json` is the commit point for visibility in MVP
+- normal read commands must trust only the profiles listed in `metadata.json`
+- orphaned profile directories must be ignored by normal reads
+
 ### 15.3 Recovery Rule
 
 If `metadata.json` is missing but profile directories exist, automatic rebuild is not required in MVP.
@@ -732,6 +819,7 @@ Recommended flags:
 If `--no-input` is set and confirmation would be needed:
 
 - fail with actionable error
+- return a state/precondition error
 
 ### 16.3 Confirmation Points
 
@@ -891,6 +979,11 @@ Required fields:
 - `LastUsedAt *time.Time`
 - `AuthHash string`
 
+Constraints:
+
+- `ID` must match the MVP `profile-id` format
+- `Label` must follow label validation rules
+
 ### 20.2 `Metadata`
 
 Required fields:
@@ -1014,6 +1107,21 @@ Algorithm:
 6. update `profile.json`
 7. persist metadata
 
+### 22.6 Confirmation Algorithm
+
+Algorithm:
+
+1. detect interactive mode
+2. if interactive mode is false:
+   - if command supports `--yes` and it is set, continue
+   - otherwise fail with confirmation-required error
+3. print confirmation prompt
+4. read a single line from stdin
+5. if EOF, treat as refusal
+6. normalize input by trim + lowercase
+7. continue only for `y` or `yes`
+8. otherwise abort without side effects
+
 ### 22.5 Remove Algorithm
 
 Algorithm:
@@ -1035,6 +1143,8 @@ Required unit test areas:
 - auth normalization
 - canonical hashing
 - label validation
+- profile ID generation and validation
+- fallback label generation
 - duplicate detection
 - path resolution
 - metadata read/write
@@ -1046,11 +1156,13 @@ Required integration test areas:
 
 - save-current creates profile and metadata
 - save-current skips duplicate auth
+- save-current leaves orphaned files ignored if metadata commit fails
 - add creates backup and deletes live auth
 - switch replaces live auth
 - switch updates timestamps
 - rename updates both metadata and profile file
 - remove deletes profile and updates metadata
+- non-interactive confirmation failure behavior
 
 ### 23.3 Fixture Strategy
 
@@ -1241,6 +1353,6 @@ The implementation is done when:
 - backups are created before destructive auth changes
 - file writes are atomic where required
 - managed files get restrictive permissions
+- interactive and non-interactive confirmation behavior is predictable
 - tests cover core logic and error paths
 - manual verification has been completed on both supported platforms
-
