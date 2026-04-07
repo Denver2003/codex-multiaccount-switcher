@@ -1,0 +1,15 @@
+class CodexSwitcher < Formula
+  desc "Local CLI utility for switching Codex auth profiles"
+  homepage "https://github.com/Denver2003/codex-multiaccount-switcher"
+  url "https://github.com/Denver2003/codex-multiaccount-switcher/releases/download/v{{VERSION}}/codex-switcher_{{VERSION_NO_V}}_darwin_arm64.tar.gz"
+  sha256 "{{SHA256}}"
+  version "{{VERSION_NO_V}}"
+
+  def install
+    bin.install "codex-switcher"
+  end
+
+  test do
+    system "#{bin}/codex-switcher", "--help"
+  end
+end

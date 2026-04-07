@@ -1,0 +1,63 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build release archives
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+
+          targets=(
+            "linux amd64"
+            "linux arm64"
+            "darwin amd64"
+            "darwin arm64"
+          )
+
+          for target in "${targets[@]}"; do
+            read -r goos goarch <<<"$target"
+            archive="codex-switcher_${version}_${goos}_${goarch}.tar.gz"
+            stage_dir="dist/stage-${goos}-${goarch}"
+
+            rm -rf "$stage_dir"
+            mkdir -p "$stage_dir"
+
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -o "$stage_dir/codex-switcher" ./cmd/codex-switcher
+            cp README.md "$stage_dir/README.md"
+
+            tar -C "$stage_dir" -czf "dist/$archive" codex-switcher README.md
+          done
+
+          (
+            cd dist
+            sha256sum ./*.tar.gz > SHA256SUMS.txt
+          )
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
