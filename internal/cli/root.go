@@ -66,20 +66,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 	commands := registeredCommands()
 	selected, ok := commands[remainingArgs[0]]
 	if !ok {
-		fmt.Fprintf(stderr, "unknown command: %s\n\n", remainingArgs[0])
+		_, _ = fmt.Fprintf(stderr, "unknown command: %s\n\n", remainingArgs[0])
 		printUsage(stderr, commands)
 		return exitUsage
 	}
 
 	if err := selected.run(application, remainingArgs[1:]); err != nil {
 		if errors.Is(err, domain.ErrUsage) {
-			fmt.Fprintln(stderr, err)
-			fmt.Fprintln(stderr)
-			fmt.Fprintf(stderr, "Usage: codex-switcher %s\n", selected.usage)
+			_, _ = fmt.Fprintln(stderr, err)
+			_, _ = fmt.Fprintln(stderr)
+			_, _ = fmt.Fprintf(stderr, "Usage: codex-switcher %s\n", selected.usage)
 			return exitUsage
 		}
 
-		fmt.Fprintln(stderr, err)
+		_, _ = fmt.Fprintln(stderr, err)
 		return exitFailure
 	}
 
@@ -148,13 +148,13 @@ func printUsage(w io.Writer, commands map[string]command) {
 	}
 	sort.Strings(names)
 
-	fmt.Fprintln(w, "Usage:")
-	fmt.Fprintln(w, "  codex-switcher [--verbose] [--config-dir <path>] [--auth-file <path>] <command> [args]")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Commands:")
+	_, _ = fmt.Fprintln(w, "Usage:")
+	_, _ = fmt.Fprintln(w, "  codex-switcher [--verbose] [--config-dir <path>] [--auth-file <path>] <command> [args]")
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "Commands:")
 
 	for _, name := range names {
 		cmd := commands[name]
-		fmt.Fprintf(w, "  %-14s %s\n", cmd.name, cmd.description)
+		_, _ = fmt.Fprintf(w, "  %-14s %s\n", cmd.name, cmd.description)
 	}
 }
