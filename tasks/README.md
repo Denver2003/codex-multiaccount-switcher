@@ -10,10 +10,10 @@ Work through the tasks in this order:
 6. [`05_save_current_switch.md`](./05_save_current_switch.md)
 7. [`06_add_rename_remove.md`](./06_add_rename_remove.md)
 8. [`07_cli_ux_and_verification.md`](./07_cli_ux_and_verification.md)
+9. [`08_distribution_without_go.md`](./08_distribution_without_go.md)
 
 ## Notes
 
 - Keep the tasks sequential unless a task explicitly says it can be done in parallel.
 - Do not start later implementation tasks before the read-first and bootstrap tasks are complete.
 - Follow `agents.md` for code quality and verification rules.
-
