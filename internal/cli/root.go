@@ -98,7 +98,7 @@ func registeredCommands() map[string]command {
 			name:        "list",
 			usage:       "list",
 			description: "List saved profiles.",
-			run:         notImplemented("list"),
+			run:         runList,
 		},
 		"remove": {
 			name:        "remove",
@@ -122,7 +122,7 @@ func registeredCommands() map[string]command {
 			name:        "status",
 			usage:       "status",
 			description: "Inspect the current auth state and local profile store.",
-			run:         notImplemented("status"),
+			run:         runStatus,
 		},
 		"switch": {
 			name:        "switch",
@@ -139,6 +139,10 @@ func notImplemented(name string) func(*app.App, []string) error {
 		_ = args
 		return fmt.Errorf("%s: %w", name, domain.ErrNotImplemented)
 	}
+}
+
+func errUsageMessage(command string) error {
+	return fmt.Errorf("%w: invalid arguments for %s", domain.ErrUsage, command)
 }
 
 func printUsage(w io.Writer, commands map[string]command) {
