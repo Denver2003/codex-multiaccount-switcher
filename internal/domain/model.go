@@ -1,12 +1,5 @@
 package domain
 
-import "errors"
-
-var (
-	ErrNotImplemented = errors.New("not implemented")
-	ErrUsage          = errors.New("usage error")
-)
-
 type Metadata struct {
 	SchemaVersion    int              `json:"schema_version"`
 	CreatedAt        string           `json:"created_at"`
