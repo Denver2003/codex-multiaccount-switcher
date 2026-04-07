@@ -27,10 +27,10 @@ type command struct {
 }
 
 func Main(args []string) int {
-	return run(args, os.Stdout, os.Stderr)
+	return run(args, os.Stdin, os.Stdout, os.Stderr)
 }
 
-func run(args []string, stdout, stderr io.Writer) int {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	rootFlags := flag.NewFlagSet("codex-switcher", flag.ContinueOnError)
 	rootFlags.SetOutput(io.Discard)
 
@@ -54,7 +54,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	resolver := config.NewResolver(configDir, authFile)
-	application := app.New(resolver, stdout, stderr)
+	application := app.New(resolver, stdin, stdout, stderr, isInteractive(os.Stdin, os.Stdout))
 	_ = verbose
 
 	remainingArgs := rootFlags.Args()
@@ -86,13 +86,27 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return exitSuccess
 }
 
+func isInteractive(stdin *os.File, stdout *os.File) bool {
+	stdinInfo, err := stdin.Stat()
+	if err != nil {
+		return false
+	}
+
+	stdoutInfo, err := stdout.Stat()
+	if err != nil {
+		return false
+	}
+
+	return (stdinInfo.Mode()&os.ModeCharDevice) != 0 && (stdoutInfo.Mode()&os.ModeCharDevice) != 0
+}
+
 func registeredCommands() map[string]command {
 	return map[string]command{
 		"add": {
 			name:        "add",
 			usage:       "add",
 			description: "Prepare the environment for logging into another Codex account.",
-			run:         notImplemented("add"),
+			run:         runAdd,
 		},
 		"list": {
 			name:        "list",
@@ -104,19 +118,19 @@ func registeredCommands() map[string]command {
 			name:        "remove",
 			usage:       "remove <profile>",
 			description: "Remove a saved profile.",
-			run:         notImplemented("remove"),
+			run:         runRemove,
 		},
 		"rename": {
 			name:        "rename",
 			usage:       "rename <profile> <new-label>",
 			description: "Rename a saved profile.",
-			run:         notImplemented("rename"),
+			run:         runRename,
 		},
 		"save-current": {
 			name:        "save-current",
 			usage:       "save-current [--label <value>]",
 			description: "Save the current active auth as a reusable profile.",
-			run:         notImplemented("save-current"),
+			run:         runSaveCurrent,
 		},
 		"status": {
 			name:        "status",
@@ -128,16 +142,8 @@ func registeredCommands() map[string]command {
 			name:        "switch",
 			usage:       "switch <profile>",
 			description: "Switch the active Codex auth to a saved profile.",
-			run:         notImplemented("switch"),
+			run:         runSwitch,
 		},
-	}
-}
-
-func notImplemented(name string) func(*app.App, []string) error {
-	return func(application *app.App, args []string) error {
-		_ = application
-		_ = args
-		return fmt.Errorf("%s: %w", name, domain.ErrNotImplemented)
 	}
 }
 

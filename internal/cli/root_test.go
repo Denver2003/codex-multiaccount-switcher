@@ -12,7 +12,7 @@ func TestRunWithoutCommandPrintsUsage(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := run(nil, &stdout, &stderr)
+	exitCode := run(nil, strings.NewReader(""), &stdout, &stderr)
 	if exitCode != exitSuccess {
 		t.Fatalf("expected exit code %d, got %d", exitSuccess, exitCode)
 	}
@@ -32,7 +32,7 @@ func TestRunHelpFlagPrintsUsage(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	exitCode := run([]string{"--help"}, &stdout, &stderr)
+	exitCode := run([]string{"--help"}, strings.NewReader(""), &stdout, &stderr)
 	if exitCode != exitSuccess {
 		t.Fatalf("expected exit code %d, got %d", exitSuccess, exitCode)
 	}

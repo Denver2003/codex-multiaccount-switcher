@@ -7,15 +7,19 @@ import (
 )
 
 type App struct {
-	Paths  *config.Resolver
-	Stdout io.Writer
-	Stderr io.Writer
+	Paths       *config.Resolver
+	Stdin       io.Reader
+	Stdout      io.Writer
+	Stderr      io.Writer
+	Interactive bool
 }
 
-func New(paths *config.Resolver, stdout, stderr io.Writer) *App {
+func New(paths *config.Resolver, stdin io.Reader, stdout, stderr io.Writer, interactive bool) *App {
 	return &App{
-		Paths:  paths,
-		Stdout: stdout,
-		Stderr: stderr,
+		Paths:       paths,
+		Stdin:       stdin,
+		Stdout:      stdout,
+		Stderr:      stderr,
+		Interactive: interactive,
 	}
 }
