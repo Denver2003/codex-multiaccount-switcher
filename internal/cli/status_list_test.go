@@ -178,6 +178,6 @@ func runCLI(t *testing.T, configDir, authFile string, args ...string) (string, s
 	var stdout strings.Builder
 	var stderr strings.Builder
 
-	exitCode := run(fullArgs, &stdout, &stderr)
+	exitCode := run(fullArgs, strings.NewReader(""), &stdout, &stderr)
 	return stdout.String(), stderr.String(), exitCode
 }
