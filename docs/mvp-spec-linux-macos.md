@@ -148,6 +148,7 @@ Behavior:
 - validate JSON
 - derive suggested label if possible
 - allow user-provided label override
+- compute `auth_hash` from normalized auth JSON
 - if the same normalized auth is already stored, skip creating a duplicate and report the existing profile
 - persist profile in profile storage
 - do not modify the active auth file
@@ -161,7 +162,7 @@ Behavior:
 1. detect whether an active auth exists
 2. if active auth exists, ask whether to save it before continuing
 3. create safety backup of active auth if present
-4. remove or quarantine current active auth
+4. remove current active auth from the live location
 5. instruct the user to authenticate manually in Codex CLI or Codex desktop app
 6. instruct the user to verify the new login and then run `save-current`
 7. complete successfully without waiting for a new auth file to appear
@@ -339,6 +340,15 @@ The system must validate:
 The MVP should not depend on a strict schema beyond basic sanity checks because the upstream auth format may evolve.
 
 Email extraction is best-effort only. If no reliable email can be extracted, the tool must fall back to generated labels such as `account-1`.
+
+For MVP, auth normalization rules are fixed as follows:
+
+- parse the auth file as JSON
+- remove only the top-level `last_refresh` field before hashing
+- preserve all other fields exactly as parsed
+- serialize the normalized JSON in canonical form before computing `auth_hash`
+
+No additional fields may be ignored in MVP unless the specification is revised later.
 
 ## 11. Security Requirements
 
@@ -595,7 +605,7 @@ It must:
 
 - optionally save the currently active auth first
 - always create a backup before removing active auth
-- remove or quarantine the active auth from the live location
+- remove the active auth from the live location after backup
 - instruct the user to authenticate manually in Codex CLI or Codex desktop app
 - instruct the user to run `save-current` after login succeeds
 
@@ -604,6 +614,7 @@ It must not:
 - automatically run `codex login`
 - poll for a new auth file
 - keep a long-running interactive session open waiting for login completion
+- use a quarantine location for the active auth file in MVP
 
 ### 20.2 Restart Strategy
 
@@ -653,6 +664,7 @@ Implications:
 - the tool must report which profile already contains that auth
 - it must not create duplicate profiles for the same auth in MVP
 - it must not silently overwrite the existing profile
+- `auth_hash` must be computed from normalized JSON with only the top-level `last_refresh` field removed before canonical serialization
 
 ## 21. Recommended Next Step
 
